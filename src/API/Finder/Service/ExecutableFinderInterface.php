@@ -12,6 +12,14 @@ namespace PhpTuf\ComposerStager\API\Finder\Service;
 interface ExecutableFinderInterface
 {
     /**
+     * Determines whether the given executable exists.
+     *
+     * @param string $name
+     *   The machine name of the executable, e.g., "composer" or "rsync".
+     */
+    public function exists(string $name): bool;
+
+    /**
      * Finds the path to a given executable.
      *
      * @param string $name

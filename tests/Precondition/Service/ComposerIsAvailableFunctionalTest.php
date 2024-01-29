@@ -116,6 +116,13 @@ final class ComposerIsAvailableFunctionalTest extends TestCase
 
 final class ComposerNotFoundExecutableFinder implements ExecutableFinderInterface
 {
+    public const EXCEPTION_MESSAGE = 'Cannot find Composer.';
+
+    public function exists(string $name): bool
+    {
+        return false;
+    }
+
     public function find(string $name): string
     {
         throw new LogicException(TranslationTestHelper::createTranslatableMessage(''));
@@ -125,6 +132,11 @@ final class ComposerNotFoundExecutableFinder implements ExecutableFinderInterfac
 final class InvalidComposerFoundExecutableFinder implements ExecutableFinderInterface
 {
     public string $output = '';
+
+    public function exists(string $name): bool
+    {
+        return false;
+    }
 
     public function find(string $name): string
     {

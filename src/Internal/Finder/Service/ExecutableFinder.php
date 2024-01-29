@@ -24,6 +24,17 @@ final class ExecutableFinder implements ExecutableFinderInterface
         $this->setTranslatableFactory($translatableFactory);
     }
 
+    public function exists(string $name): bool
+    {
+        try {
+            $this->find($name);
+        } catch (LogicException) {
+            return false;
+        }
+        
+        return true;
+    }
+
     public function find(string $name): string
     {
         // Look for PHAR files--a common case with Composer, for example.

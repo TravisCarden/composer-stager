@@ -38,4 +38,32 @@ final class ExecutableFinderFunctionalTest extends TestCase
             $sut->find('xyz');
         }, LogicException::class);
     }
+
+    /**
+     * @covers ::exists
+     *
+     * @dataProvider providerExists
+     */
+    public function testExists(string $commandName, bool $expected): void
+    {
+        $sut = $this->createSut();
+
+        $actual = $sut->exists($commandName);
+
+        self::assertSame($expected, $actual);
+    }
+
+    public function providerExists(): array
+    {
+        return [
+            'Exists' => [
+                'commandName' => 'composer',
+                'expected' => true,
+            ],
+            'Does not exist' => [
+                'commandName' => 'invalid_command',
+                'expected' => false,
+            ],
+        ];
+    }
 }

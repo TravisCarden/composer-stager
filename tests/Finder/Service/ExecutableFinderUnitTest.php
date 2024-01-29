@@ -35,6 +35,44 @@ final class ExecutableFinderUnitTest extends TestCase
         return new ExecutableFinder($executableFinder, $translatorFactory);
     }
 
+    /**
+     * @covers ::exists
+     *
+     * @dataProvider providerExists
+     */
+    public function testExists(string $commandName, ?string $symfonyFindReturn, bool $expected): void
+    {
+        $this->symfonyExecutableFinder
+            ->addSuffix('.phar')
+            ->shouldBeCalledOnce()
+            ->willReturn(null);
+        $this->symfonyExecutableFinder
+            ->find($commandName)
+            ->shouldBeCalledOnce()
+            ->willReturn($symfonyFindReturn);
+        $sut = $this->createSut();
+
+        $actual = $sut->exists($commandName);
+
+        self::assertSame($expected, $actual);
+    }
+
+    public function providerExists(): array
+    {
+        return [
+            'Exists' => [
+                'commandName' => 'one',
+                'symfonyFindReturn' => '/var/bin/one',
+                'expected' => true,
+            ],
+            'Does not exist' => [
+                'commandName' => 'two',
+                'symfonyFindReturn' => null,
+                'expected' => false,
+            ],
+        ];
+    }
+
     /** @covers ::find */
     public function testFind(): void
     {
