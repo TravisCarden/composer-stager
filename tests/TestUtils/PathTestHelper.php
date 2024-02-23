@@ -180,7 +180,9 @@ final class PathTestHelper
 
     public static function createPathHelper(): PathHelperInterface
     {
-        return new PathHelper();
+        $translatableFactory = TranslationTestHelper::createTranslatableFactory();
+
+        return new PathHelper($translatableFactory);
     }
 
     public static function createPathList(string ...$paths): PathListInterface

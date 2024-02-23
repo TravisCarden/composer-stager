@@ -2,7 +2,10 @@
 
 namespace PhpTuf\ComposerStager\Internal\Path\Service;
 
+use PhpTuf\ComposerStager\API\Exception\InvalidArgumentException;
+use PhpTuf\ComposerStager\API\Translation\Factory\TranslatableFactoryInterface;
 use PhpTuf\ComposerStager\Internal\Translation\Factory\TranslatableAwareTrait;
+use Symfony\Component\Filesystem\Exception\InvalidArgumentException as SymfonyInvalidArgumentException;
 use Symfony\Component\Filesystem\Path as SymfonyPath;
 
 /**
@@ -13,6 +16,11 @@ use Symfony\Component\Filesystem\Path as SymfonyPath;
 final class PathHelper implements PathHelperInterface
 {
     use TranslatableAwareTrait;
+
+    public function __construct(TranslatableFactoryInterface $translatableFactory)
+    {
+        $this->setTranslatableFactory($translatableFactory);
+    }
 
     public function canonicalize(string $path): string
     {
@@ -36,5 +44,25 @@ final class PathHelper implements PathHelperInterface
     public function isRelative(string $path): bool
     {
         return SymfonyPath::isRelative($path);
+    }
+
+    public function makeRelative(string $path, string $basePath): string
+    {
+        try {
+            return SymfonyPath::makeRelative($path, $basePath);
+        } catch (SymfonyInvalidArgumentException $e) {
+            $path = $this->canonicalize($path);
+            $basePath = $this->canonicalize($basePath);
+
+            throw new InvalidArgumentException($this->t(
+                'The path %path cannot be made relative to %base_path: %details',
+                $this->p([
+                    '%path' => $path,
+                    '%base_path' => $basePath,
+                    '%details' => $e->getMessage(),
+                ]),
+                $this->d()->exceptions(),
+            ), 0, $e);
+        }
     }
 }

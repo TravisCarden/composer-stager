@@ -2,15 +2,28 @@
 
 namespace PhpTuf\ComposerStager\Tests\Path\Service;
 
+use PhpTuf\ComposerStager\API\Exception\InvalidArgumentException;
 use PhpTuf\ComposerStager\Internal\Path\Service\PathHelper;
 use PhpTuf\ComposerStager\Tests\TestCase;
+use Symfony\Component\Filesystem\Path as SymfonyPath;
+use Throwable;
 
 /** @coversDefaultClass \PhpTuf\ComposerStager\Internal\Path\Service\PathHelper */
 final class PathHelperUnitTest extends TestCase
 {
     public function createSut(): PathHelper
     {
-        return new PathHelper();
+        $translatableFactory = self::createTranslatableFactory();
+
+        return new PathHelper($translatableFactory);
+    }
+
+    /** @covers ::__construct */
+    public function testIsTranslatableAware(): void
+    {
+        $sut = $this->createSut();
+
+        self::assertTranslatableAware($sut);
     }
 
     /**
@@ -115,6 +128,99 @@ final class PathHelperUnitTest extends TestCase
             'False: Unix' => [false, 'one/two'],
             'False: Windows' => [false, '../one/two'],
             'False: UNC' => [false, '..\\One\\Two'],
+        ];
+    }
+
+    /**
+     * @covers ::makeRelative
+     *
+     * @dataProvider providerMakeRelative
+     */
+    public function testMakeRelative(string $path, string $basePath, string $expected): void
+    {
+        $sut = $this->createSut();
+
+        self::assertSame($expected, $sut->makeRelative($path, $basePath));
+    }
+
+    public function providerMakeRelative(): array
+    {
+        return [
+            'Empty paths' => [
+                'path' => '',
+                'basePath' => '',
+                'expected' => '',
+            ],
+            'Identical absolute paths' => [
+                'path' => '/one/two',
+                'basePath' => '/one/two',
+                'expected' => '',
+            ],
+            'Identical relative paths' => [
+                'path' => 'one/two',
+                'basePath' => 'one/two',
+                'expected' => '',
+            ],
+            'Relative path, absolute base path' => [
+                'path' => 'one/two',
+                'basePath' => '/three/four',
+                'expected' => 'one/two',
+            ],
+            'Absolute paths with no common ancestor' => [
+                'path' => '/one/two/three',
+                'basePath' => '/four/five/six',
+                'expected' => '../../../one/two/three',
+            ],
+            'Absolute paths with a common ancestor' => [
+                'path' => '/one/two/three',
+                'basePath' => '/one/five/six',
+                'expected' => '../../two/three',
+            ],
+            'Crazy paths' => [
+                'path' => '/one/.//\\/./two/three/four/five/./././..//.//../\\///../././.././six/\\\\//seven',
+                'basePath' => '/one\\.\\\\/\\.\\two\\three\\four\\five\\./.\\.\\..//.\\\\..\\\/\\\\\..\\.\\.\\..\\.\\six/\\\\\\/eight',
+                'expected' => '../seven',
+            ],
+        ];
+    }
+
+    /**
+     * @covers ::makeRelative
+     *
+     * @dataProvider providerMakeRelativeException
+     */
+    public function testMakeRelativeException(string $path, string $basePath, string $expectedExceptionMessage): void
+    {
+        $sut = $this->createSut();
+
+        $details = '';
+
+        // Get the expected "previous" message from Symfony Path.
+        try {
+            SymfonyPath::makeRelative($path, $basePath);
+        } catch (Throwable $e) {
+            $details = $e->getMessage();
+        }
+
+        $expectedExceptionMessage = sprintf($expectedExceptionMessage, $details);
+        self::assertTranslatableException(static function () use ($sut, $path, $basePath): void {
+            $sut->makeRelative($path, $basePath);
+        }, InvalidArgumentException::class, $expectedExceptionMessage);
+    }
+
+    public function providerMakeRelativeException(): array
+    {
+        return [
+            'Relative base path' => [
+                'path' => '/one/two',
+                'basePath' => 'three/four',
+                'expectedExceptionMessage' => 'The path /one/two cannot be made relative to three/four: %s',
+            ],
+            'Different roots (Windows)' => [
+                'path' => 'C:\\one/two/three',
+                'basePath' => 'D:\\four/five/six',
+                'expectedExceptionMessage' => 'The path C:/one/two/three cannot be made relative to D:/four/five/six: %s',
+            ],
         ];
     }
 }
